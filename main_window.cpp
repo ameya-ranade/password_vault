@@ -10,6 +10,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QSettings>
+#include <QtWidgets/QInputDialog>
 
 main_window::main_window(QMainWindow *parent) : QMainWindow(parent), main_win(new Ui::MainWindow)
 {
@@ -28,6 +29,7 @@ main_window::main_window(QMainWindow *parent) : QMainWindow(parent), main_win(ne
     	settings->setValue("db_path", QDir::currentPath());
     	dbpath = QDir::currentPath();
     }
+    int max_idle_time = settings->value("idle_timeout", MAX_IDLE_TIME).toInt();
 
     this->db_manager = new JSON_handler(dbpath);
     this->main_win->db_list->setModel(this->db_manager);
@@ -38,6 +40,13 @@ main_window::main_window(QMainWindow *parent) : QMainWindow(parent), main_win(ne
     this->timer_obj = new QTimer();
     this->timer_obj->setSingleShot(true);
     this->timer_obj->setInterval(200);
+
+    this->inactivity_timer = new QTimer;
+    this->inactivity_timer->setSingleShot(true);
+    this->inactivity_timer->setInterval(max_idle_time);
+
+    /* Connect inactivity timer to return to main page when idle for 30 sec */
+    QObject::connect(this->inactivity_timer, &QTimer::timeout, this, &main_window::onBackToDbList_clicked);
 
     QObject::connect(this->timer_obj, SIGNAL(timeout()),
     		this, SLOT(app_state_machine()));
@@ -94,6 +103,9 @@ main_window::main_window(QMainWindow *parent) : QMainWindow(parent), main_win(ne
     /* Action */
     QObject::connect(this->main_win->actionDB_Location, SIGNAL(triggered()),
     		this, SLOT(onDBLocation_action()));
+
+    QObject::connect(this->main_win->actionIdle_Time, SIGNAL(triggered()),
+    			this, SLOT(onIdleTimeSet_action()));
 
     this->sys_state = SYS_STATE_INIT;
     this->db_passwd = 0;
@@ -192,6 +204,9 @@ void main_window::onDbOpen_clicked()
 		this->status_text->setText("Error opening DB");
 	}
 	delete(db_data);
+
+	/* Start inactivity monitoring */
+	this->inactivity_timer->start();
 }
 
 void main_window::onDeleteDbClicked()
@@ -204,6 +219,9 @@ void main_window::onRecListItem_clicked(const QModelIndex &index)
 	this->rec_handler->get_record_data(index.row(),
 					*this->main_win->display_username,
 					*this->main_win->display_password);
+
+	/* Reset idle monitoring */
+	this->inactivity_timer->start();
 }
 
 void main_window::onBackToDbList_clicked()
@@ -220,6 +238,12 @@ void main_window::onBackToDbList_clicked()
 		memset(this->db_passwd, 0, 20);
 	}
 	this->main_win->stackedWidget->setCurrentIndex(PAGE_MAIN);
+	/* Stop inactivity timer if active */
+	if(this->inactivity_timer->isActive())
+	{
+		this->inactivity_timer->stop();
+	}
+
 }
 
 void main_window::open_add_rec_page()
@@ -233,6 +257,9 @@ void main_window::open_add_rec_page()
 	this->main_win->db_list->clearSelection();
 
 	this->main_win->stackedWidget->setCurrentIndex(PAGE_ADD_NEW_RECORD);
+
+	/* Stop inactivity timer */
+	this->inactivity_timer->stop();
 }
 
 void main_window::onEdit_record()
@@ -246,6 +273,8 @@ void main_window::onEdit_record()
 
 	this->main_win->stackedWidget->setCurrentIndex(PAGE_ADD_NEW_RECORD);
 
+	/* Stop inactivity timer */
+	this->inactivity_timer->stop();
 }
 
 void main_window::onDelete_record()
@@ -300,6 +329,9 @@ void main_window::do_add_new_rec()
 			this->db_passwd, 20, *db_data);
 
 	delete(db_data);
+
+	/* Restart inactivity timer */
+	this->inactivity_timer->start();
 }
 
 void main_window::cancel_add_new_rec()
@@ -308,6 +340,9 @@ void main_window::cancel_add_new_rec()
 	this->main_win->display_username->clear();
 	this->main_win->display_password->clear();
 	this->main_win->stackedWidget->setCurrentIndex(PAGE_SHOW_REC_DATA);
+
+	/* Restart inactivity timer */
+	this->inactivity_timer->start();
 }
 
 void main_window::to_view_passwd()
@@ -322,7 +357,7 @@ void main_window::to_hide_passwd()
 
 void main_window::onDBLocation_action()
 {
-	QSettings *settings = new QSettings(QSettings::UserScope, "ARanade", "passdb");
+	QSettings *settings = new QSettings(QSettings::UserScope, "ARanade", "PassVault");
 	QString dbpath = settings->value("db_path").toString();
     if(dbpath.isEmpty())
     {
@@ -339,5 +374,37 @@ void main_window::onDBLocation_action()
 		this->db_manager->set_db_path(dir);
 	}
 
+}
 
+void main_window::onIdleTimeSet_action()
+{
+	QSettings *settings = new QSettings(QSettings::UserScope, "ARanade", "PassVault");
+	int idle_time = settings->value("idle_timeout", MAX_IDLE_TIME).toInt();
+	bool ok;
+	int new_idle_time = QInputDialog::getInt(0, "Idle Time", "Enter new idle time",
+			idle_time, 10000, 60000, 1000, &ok);
+
+	QString info_text = "Idle time ";
+
+	if(ok)
+	{
+		if(idle_time != new_idle_time)
+		{
+			info_text.append("= ");
+			info_text.append(QString::number(new_idle_time));
+			info_text.append(" ms");
+			settings->setValue("idle_timeout", new_idle_time);
+		}
+		else
+		{
+			info_text.append("unchanged");
+		}
+	}
+	else
+	{
+		info_text.append("unchanged");
+	}
+
+
+	this->status_text->setText(info_text);
 }

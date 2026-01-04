@@ -35,6 +35,7 @@ class Ui_MainWindow
 {
 public:
     QAction *actionDB_Location;
+    QAction *actionIdle_Time;
     QWidget *centralwidget;
     QGridLayout *gridLayout;
     QStackedWidget *stackedWidget;
@@ -100,6 +101,8 @@ public:
         MainWindow->resize(500, 300);
         actionDB_Location = new QAction(MainWindow);
         actionDB_Location->setObjectName(QString::fromUtf8("actionDB_Location"));
+        actionIdle_Time = new QAction(MainWindow);
+        actionIdle_Time->setObjectName(QString::fromUtf8("actionIdle_Time"));
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
         gridLayout = new QGridLayout(centralwidget);
@@ -384,7 +387,7 @@ public:
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
-        menubar->setGeometry(QRect(0, 0, 500, 20));
+        menubar->setGeometry(QRect(0, 0, 500, 30));
         menuSettings = new QMenu(menubar);
         menuSettings->setObjectName(QString::fromUtf8("menuSettings"));
         MainWindow->setMenuBar(menubar);
@@ -394,10 +397,11 @@ public:
 
         menubar->addAction(menuSettings->menuAction());
         menuSettings->addAction(actionDB_Location);
+        menuSettings->addAction(actionIdle_Time);
 
         retranslateUi(MainWindow);
 
-        stackedWidget->setCurrentIndex(2);
+        stackedWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(MainWindow);
@@ -407,6 +411,7 @@ public:
     {
         MainWindow->setWindowTitle(QCoreApplication::translate("MainWindow", "Password DB", nullptr));
         actionDB_Location->setText(QCoreApplication::translate("MainWindow", "DB Location", nullptr));
+        actionIdle_Time->setText(QCoreApplication::translate("MainWindow", "Idle Time", nullptr));
         delete_db->setText(QCoreApplication::translate("MainWindow", "Delete DB", nullptr));
         label_selecteddb->setText(QCoreApplication::translate("MainWindow", "Enter DB Password", nullptr));
         decrypt_pass->setPlaceholderText(QCoreApplication::translate("MainWindow", "decryption password", nullptr));

@@ -25,6 +25,8 @@
 #define PAGE_SHOW_REC_DATA				2
 #define PAGE_ADD_NEW_RECORD				3
 
+#define MAX_IDLE_TIME					30000 /* in msec */
+
 struct edit_record_info_t {
 	char edit_record;
 	int rec_index;
@@ -82,6 +84,9 @@ public slots:
 	/* Called when the user presses DB Location action */
 	void onDBLocation_action();
 
+	/* Called when the user presses Idle Time action */
+	void onIdleTimeSet_action();
+
 private:
     int sys_state;
     char *db_passwd;
@@ -90,6 +95,7 @@ private:
     QLabel *status_text;
     JSON_handler *db_manager;
     Record_handler *rec_handler;
+    QTimer *inactivity_timer;
 };
 
 #endif // MAIN_WINDOW_H
